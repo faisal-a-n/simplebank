@@ -5,13 +5,13 @@ dropdb:
 	docker exec -it postgres dropdb --username=postgres simple_bank
 
 migrateup:
-	sudo docker run -v ~/Documents/Projects/simple-bank/db/migrations:/migrations --network host migrate/migrate -path=/migrations/ -database "postgres://postgres:password@localhost:5432/simple_bank?sslmode=disable" -verbose up
+	migrate -path db/migrations -database "postgres://postgres:password@localhost:5432/simple_bank?sslmode=disable" -verbose up
 
 migratedown:
-	sudo docker run -v ~/Documents/Projects/simple-bank/db/migrations:/migrations --network host migrate/migrate -path=/migrations/ -database "postgres://postgres:password@localhost:5432/simple_bank?sslmode=disable" -verbose down 1
+	migrate -path db/migrations -database "postgres://postgres:password@localhost:5432/simple_bank?sslmode=disable" -verbose down 1
 
 migrateforce:
-	sudo docker run -v ~/Documents/Projects/simple-bank/db/migrations:/migrations --network host migrate/migrate -path=/migrations/ -database "postgres://postgres:password@localhost:5432/simple_bank?sslmode=disable" -verbose force 1
+	migrate -path db/migrations -database "postgres://postgres:password@localhost:5432/simple_bank?sslmode=disable" -verbose force 1
 
 
 sqlc:
