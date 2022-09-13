@@ -9,6 +9,7 @@ import (
 )
 
 func TestTransferTx(t *testing.T) {
+	//Store contains transaction queries with sqlc composition
 	store := NewStore(testDB)
 
 	account1 := createTestAccount(t, -1)
@@ -138,9 +139,9 @@ func TestTransferTxDeadlock(t *testing.T) {
 		go func() {
 			//Queries are ran sequentially to prevent deadlock. queries with same id are ran together so they don't have to wait
 			if account1.ID < account2.ID {
-				account1, account2, err = addMoney(context.Background(), store.Queries, account1.ID, account2.ID, -amount, amount)
+				account1, account2, err = addMoney(context.Background(), store, account1.ID, account2.ID, -amount, amount)
 			} else {
-				account1, account2, err = addMoney(context.Background(), store.Queries, account2.ID, account1.ID, amount, -amount)
+				account1, account2, err = addMoney(context.Background(), store, account2.ID, account1.ID, amount, -amount)
 			}
 			errs <- err
 		}()
@@ -163,7 +164,7 @@ func TestTransferTxDeadlock(t *testing.T) {
 	fmt.Println("after >> ", updatedAccount1.Balance, updatedAccount2.Balance)
 }
 
-func addMoney(ctx context.Context, q *Queries, account1Id, account2Id, amount1, amount2 int64) (account1 Account, account2 Account, err error) {
+func addMoney(ctx context.Context, q Store, account1Id, account2Id, amount1, amount2 int64) (account1 Account, account2 Account, err error) {
 	account1, err = q.UpdateBalance(ctx, UpdateBalanceParams{
 		Amount: amount1,
 		ID:     account1Id,

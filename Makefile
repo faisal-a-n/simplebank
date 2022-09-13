@@ -21,4 +21,10 @@ test:
 	go clean -testcache
 	go test -v -cover ./...
 
-.PHONY: postgres createdb dropdb migrateup migratedown sqlc
+server:
+	go run .
+
+mock:
+	mockgen -package mock_db -destination db/mock/store.go github.com/faisal-a-n/simplebank/db/sqlc Store
+
+.PHONY: postgres createdb dropdb migrateup migratedown sqlc server mock
