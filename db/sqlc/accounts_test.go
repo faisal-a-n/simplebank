@@ -11,11 +11,13 @@ import (
 )
 
 func createTestAccount(t *testing.T, balance int64) Account {
+	user := createTestUser(t)
 	if balance == -1 {
 		balance = util.GenerateAmount()
 	}
 	arg := CreateAccountParams{
-		Name:      util.GenerateName(8),
+		Name:      user.Name,
+		UserID:    user.ID,
 		Balance:   balance,
 		Currency:  util.GenerateCurrency(),
 		CreatedAt: time.Now().Unix(),

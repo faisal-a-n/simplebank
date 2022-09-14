@@ -16,6 +16,7 @@ import (
 	"github.com/faisal-a-n/simplebank/util"
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
+	"github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 )
 
@@ -83,7 +84,7 @@ func TestGetAccountAPI(t *testing.T) {
 		//TODO: Add more cases
 	}
 
-	for _, testCase := range testCases[:1] {
+	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			mockController := gomock.NewController(t)
 			defer mockController.Finish()
@@ -117,9 +118,11 @@ func TestCreateAccountAPI(t *testing.T) {
 			body: gin.H{
 				"name":     account.Name,
 				"currency": account.Currency,
+				"user_id":  account.UserID,
 			},
 			builStubs: func(store *mock_db.MockStore) {
 				args := db.CreateAccountParams{
+					UserID:    account.UserID,
 					Name:      account.Name,
 					Currency:  account.Currency,
 					Balance:   0,
@@ -130,7 +133,7 @@ func TestCreateAccountAPI(t *testing.T) {
 					Return(account, nil)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
-
+				fmt.Println(recorder.Body)
 				require.Equal(t, http.StatusCreated, recorder.Code)
 			},
 		},
@@ -139,6 +142,7 @@ func TestCreateAccountAPI(t *testing.T) {
 			body: gin.H{
 				"name":     account.Name,
 				"currency": "currency",
+				"user_id":  account.UserID,
 			},
 			builStubs: func(store *mock_db.MockStore) {
 				store.EXPECT().CreateAccount(gomock.Any(), gomock.Any()).
@@ -153,9 +157,11 @@ func TestCreateAccountAPI(t *testing.T) {
 			body: gin.H{
 				"name":     account.Name,
 				"currency": account.Currency,
+				"user_id":  account.UserID,
 			},
 			builStubs: func(store *mock_db.MockStore) {
 				args := db.CreateAccountParams{
+					UserID:    account.UserID,
 					Name:      account.Name,
 					Currency:  account.Currency,
 					CreatedAt: account.CreatedAt,
@@ -168,8 +174,40 @@ func TestCreateAccountAPI(t *testing.T) {
 				require.Equal(t, http.StatusInternalServerError, recorder.Code)
 			},
 		},
+		{
+			name: "AccountWithCurrencyAlreadyExists",
+			body: gin.H{
+				"name":     account.Name,
+				"currency": account.Currency,
+				"user_id":  account.UserID,
+			},
+			builStubs: func(store *mock_db.MockStore) {
+				store.EXPECT().CreateAccount(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(db.Account{}, &pq.Error{Code: "23505"})
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusForbidden, recorder.Code)
+			},
+		},
+		{
+			name: "UserError",
+			body: gin.H{
+				"name":     account.Name,
+				"currency": account.Currency,
+				"user_id":  account.UserID,
+			},
+			builStubs: func(store *mock_db.MockStore) {
+				store.EXPECT().CreateAccount(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(db.Account{}, &pq.Error{Code: "23503"})
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusForbidden, recorder.Code)
+			},
+		},
 	}
-	for _, testCase := range testCases[:1] {
+	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			mockController := gomock.NewController(t)
 			defer mockController.Finish()
@@ -303,11 +341,13 @@ func TestGetAccountsAPI(t *testing.T) {
 }
 
 func randomAccount() db.Account {
+	user := generateRandomUser()
 	return db.Account{
 		ID:        util.GenerateRandomInt(1000, 1),
-		Name:      util.GenerateName(6),
+		Name:      util.GenerateString(6),
 		Balance:   util.GenerateAmount(),
 		Currency:  util.GenerateCurrency(),
+		UserID:    user.ID,
 		CreatedAt: time.Now().Unix(),
 	}
 }

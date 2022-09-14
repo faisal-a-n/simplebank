@@ -12,6 +12,7 @@ type Account struct {
 	Balance   int64  `json:"balance"`
 	Currency  string `json:"currency"`
 	CreatedAt int64  `json:"created_at"`
+	UserID    int64  `json:"user_id"`
 }
 
 type Entry struct {
@@ -29,4 +30,13 @@ type Transaction struct {
 	ToEntryID     int64 `json:"to_entry_id"`
 	Amount        int64 `json:"amount"`
 	CreatedAt     int64 `json:"created_at"`
+}
+
+type User struct {
+	ID                int64  `json:"id"`
+	Name              string `json:"name"`
+	Password          string `json:"password"`
+	Email             string `json:"email"`
+	PasswordChangedAt int64  `json:"password_changed_at"`
+	CreatedAt         int64  `json:"created_at"`
 }

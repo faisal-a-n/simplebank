@@ -3,16 +3,19 @@ package api
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
 	db "github.com/faisal-a-n/simplebank/db/sqlc"
 	"github.com/gin-gonic/gin"
+	"github.com/lib/pq"
 )
 
 type createAccountRequest struct {
 	Name     string `json:"name" binding:"required"`
-	Currency string `json:"currency" binding:"required,oneof=USD EUR INR CAD YEN"`
+	UserID   int64  `json:"user_id" binding:"required"`
+	Currency string `json:"currency" binding:"required,currency"`
 }
 
 type getAccountReq struct {
@@ -33,6 +36,7 @@ func (server *Server) createAccount(ctx *gin.Context) {
 
 	arg := db.CreateAccountParams{
 		Name:      req.Name,
+		UserID:    req.UserID,
 		Currency:  req.Currency,
 		Balance:   0,
 		CreatedAt: time.Now().Unix(),
@@ -40,6 +44,16 @@ func (server *Server) createAccount(ctx *gin.Context) {
 
 	account, err := server.store.CreateAccount(ctx, arg)
 	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok {
+			switch pqErr.Code.Name() {
+			case "unique_violation":
+				err = fmt.Errorf("User [%d] already has [%s] currency account", req.UserID, req.Currency)
+			case "foreign_key_violation":
+				err = fmt.Errorf("User [%d] doesn't exist", req.UserID)
+			}
+			ctx.JSON(http.StatusForbidden, errorResponse(err))
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}

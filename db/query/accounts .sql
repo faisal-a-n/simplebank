@@ -1,9 +1,9 @@
 -- name: CreateAccount :one
 INSERT into accounts (
-  "name", "balance", "currency", "created_at"
+  "user_id", "name", "balance", "currency", "created_at"
 )
 values
-($1, $2, $3, $4) RETURNING *;
+($1, $2, $3, $4, $5) RETURNING *;
 
 -- name: GetAccount :one
 SELECT * from accounts where id = $1 limit 1;
