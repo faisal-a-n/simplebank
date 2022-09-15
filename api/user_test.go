@@ -127,7 +127,9 @@ func TestCreateUserAPI(t *testing.T) {
 			require.NoError(t, err)
 
 			recorder := httptest.NewRecorder()
-			server := NewServer(store)
+			server := NewTestServer(t, store)
+			require.NoError(t, err)
+
 			server.router.ServeHTTP(recorder, request)
 		})
 	}

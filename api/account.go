@@ -8,13 +8,13 @@ import (
 	"time"
 
 	db "github.com/faisal-a-n/simplebank/db/sqlc"
+	"github.com/faisal-a-n/simplebank/token"
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 )
 
 type createAccountRequest struct {
 	Name     string `json:"name" binding:"required"`
-	UserID   int64  `json:"user_id" binding:"required"`
 	Currency string `json:"currency" binding:"required,currency"`
 }
 
@@ -34,9 +34,10 @@ func (server *Server) createAccount(ctx *gin.Context) {
 		return
 	}
 
+	authPayload := ctx.MustGet(authPayloadKey).(*token.Payload)
 	arg := db.CreateAccountParams{
 		Name:      req.Name,
-		UserID:    req.UserID,
+		UserID:    authPayload.UserID,
 		Currency:  req.Currency,
 		Balance:   0,
 		CreatedAt: time.Now().Unix(),
@@ -47,9 +48,9 @@ func (server *Server) createAccount(ctx *gin.Context) {
 		if pqErr, ok := err.(*pq.Error); ok {
 			switch pqErr.Code.Name() {
 			case "unique_violation":
-				err = fmt.Errorf("User [%d] already has [%s] currency account", req.UserID, req.Currency)
+				err = fmt.Errorf("User [%d] already has [%s] currency account", authPayload.UserID, req.Currency)
 			case "foreign_key_violation":
-				err = fmt.Errorf("User [%d] doesn't exist", req.UserID)
+				err = fmt.Errorf("User [%d] doesn't exist", authPayload.UserID)
 			}
 			ctx.JSON(http.StatusForbidden, errorResponse(err))
 			return
@@ -67,6 +68,9 @@ func (server *Server) getAccount(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("Invalid ID")))
 		return
 	}
+
+	authPayload := ctx.MustGet(authPayloadKey).(*token.Payload)
+
 	account, err := server.store.GetAccount(ctx, req.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -76,7 +80,10 @@ func (server *Server) getAccount(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
-
+	if account.UserID != authPayload.UserID {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("Account does not belong to the user")))
+		return
+	}
 	ctx.JSON(http.StatusOK, responseHandler(200, "Data fetched", account))
 }
 
@@ -88,7 +95,10 @@ func (server *Server) getAccounts(ctx *gin.Context) {
 		return
 	}
 
-	accounts, err := server.store.ListAccounts(ctx, db.ListAccountsParams{
+	authPayload := ctx.MustGet(authPayloadKey).(*token.Payload)
+
+	accounts, err := server.store.ListAccountsForUser(ctx, db.ListAccountsForUserParams{
+		UserID: authPayload.UserID,
 		Limit:  req.Count,
 		Offset: (req.PageID - 1) * req.Count,
 	})

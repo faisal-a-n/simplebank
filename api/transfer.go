@@ -2,11 +2,13 @@ package api
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	db "github.com/faisal-a-n/simplebank/db/sqlc"
+	"github.com/faisal-a-n/simplebank/token"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,8 +32,14 @@ func (server *Server) createTransfer(ctx *gin.Context) {
 		return
 	}
 
-	if !(server.checkCurrency(ctx, req.FromAccountID, req.Currency) &&
-		server.checkCurrency(ctx, req.ToAccountID, req.Currency)) {
+	fromAccount, fromCheck := server.checkCurrency(ctx, req.FromAccountID, req.Currency)
+	_, toCheck := server.checkCurrency(ctx, req.ToAccountID, req.Currency)
+
+	if !(fromCheck && toCheck) {
+		return
+	}
+
+	if !checkOwnershipAndBalance(ctx, fromAccount, req.Amount) {
 		return
 	}
 
@@ -75,19 +83,35 @@ func buildEntryParams(accountID int64, amount int64) db.CreateEntryParams {
 	}
 }
 
-func (server *Server) checkCurrency(ctx *gin.Context, accountID int64, currency string) bool {
+func (server *Server) checkCurrency(ctx *gin.Context, accountID int64, currency string) (db.Account, bool) {
 	account, err := server.store.GetAccount(ctx, accountID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, errorResponse(err))
-			return false
+			ctx.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("Provided account [%d] doesn't exist", accountID)))
+			return db.Account{}, false
 		}
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return false
+		return db.Account{}, false
 	}
 	if account.Currency != currency {
 		err := fmt.Errorf("account [%d] currency mismatch: [%s] vs [%s]", accountID, account.Currency, currency)
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return db.Account{}, false
+	}
+
+	return account, true
+}
+
+func checkOwnershipAndBalance(ctx *gin.Context, account db.Account, amount int64) bool {
+	authPayload := ctx.MustGet(authPayloadKey).(*token.Payload)
+
+	if account.UserID != authPayload.UserID {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("Account does not belong to the user")))
+		return false
+	}
+
+	if account.Balance < amount {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("Account does not have enough balance")))
 		return false
 	}
 	return true

@@ -8,6 +8,9 @@ values
 -- name: GetUser :one
 SELECT * from users where id = $1 limit 1;
 
+-- name: GetUserByEmail :one
+SELECT * from users where email = $1 limit 1;
+
 -- name: ListUsers :many
 SELECT * from Users order by id limit $1 offset $2;
 

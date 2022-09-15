@@ -93,3 +93,19 @@ func TestDeleteAccount(t *testing.T) {
 	require.EqualError(t, err, sql.ErrNoRows.Error())
 	require.Empty(t, checkAccount)
 }
+
+func TestListAccountsForUser(t *testing.T) {
+	account := createTestAccount(t, -1)
+
+	args := ListAccountsForUserParams{
+		UserID: account.UserID,
+		Limit:  100,
+		Offset: 0,
+	}
+
+	list, err := testQueries.ListAccountsForUser(context.Background(), args)
+
+	require.NoError(t, err)
+	require.NotEmpty(t, list)
+	require.Equal(t, account.UserID, list[0].UserID)
+}

@@ -129,6 +129,46 @@ func (q *Queries) ListAccounts(ctx context.Context, arg ListAccountsParams) ([]A
 	return items, nil
 }
 
+const listAccountsForUser = `-- name: ListAccountsForUser :many
+SELECT id, name, balance, currency, created_at, user_id from accounts where user_id = $1 order by id limit $2 offset $3
+`
+
+type ListAccountsForUserParams struct {
+	UserID int64 `json:"user_id"`
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) ListAccountsForUser(ctx context.Context, arg ListAccountsForUserParams) ([]Account, error) {
+	rows, err := q.db.QueryContext(ctx, listAccountsForUser, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Account{}
+	for rows.Next() {
+		var i Account
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Balance,
+			&i.Currency,
+			&i.CreatedAt,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateBalance = `-- name: UpdateBalance :one
 UPDATE accounts set balance = balance + $1 where id = $2 RETURNING id, name, balance, currency, created_at, user_id
 `

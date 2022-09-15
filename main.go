@@ -22,8 +22,10 @@ func main() {
 	}
 
 	store := db.NewStore(conn)
-	server := api.NewServer(store)
-
+	server, err := api.NewServer(config, store)
+	if err != nil {
+		log.Fatalf("Coudln't create server %v", err.Error())
+	}
 	if err = server.Start(config.PORT); err != nil {
 		log.Fatalf("Coudln't start server %v", err.Error())
 	}
