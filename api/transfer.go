@@ -33,9 +33,11 @@ func (server *Server) createTransfer(ctx *gin.Context) {
 	}
 
 	fromAccount, fromCheck := server.checkCurrency(ctx, req.FromAccountID, req.Currency)
+	if !fromCheck {
+		return
+	}
 	_, toCheck := server.checkCurrency(ctx, req.ToAccountID, req.Currency)
-
-	if !(fromCheck && toCheck) {
+	if !toCheck {
 		return
 	}
 
@@ -111,7 +113,7 @@ func checkOwnershipAndBalance(ctx *gin.Context, account db.Account, amount int64
 	}
 
 	if account.Balance < amount {
-		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("Account does not have enough balance")))
+		ctx.JSON(http.StatusForbidden, errorResponse(errors.New("Account does not have enough balance")))
 		return false
 	}
 	return true
