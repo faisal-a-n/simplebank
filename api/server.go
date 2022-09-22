@@ -21,8 +21,6 @@ type Server struct {
 
 //Create new server and setup routing
 func NewServer(config util.Config, store db.Store) (*Server, error) {
-	gin.SetMode(gin.ReleaseMode)
-
 	tokenMaker, err := token.NewPasetoMaker(config.SECRET_KEY)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot create token maker: %v", err)
