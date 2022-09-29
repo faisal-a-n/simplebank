@@ -15,7 +15,7 @@ import (
 
 func addAuthorizationHeader(t *testing.T, request *http.Request, maker token.Maker,
 	userID int64, authKey string, authType string, durtation time.Duration) {
-	access_token, err := maker.CreateToken(userID, durtation)
+	access_token, _, err := maker.CreateToken(userID, durtation)
 	require.NoError(t, err)
 	require.NotEmpty(t, access_token)
 

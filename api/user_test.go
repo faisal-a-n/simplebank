@@ -157,6 +157,7 @@ func TestLoginUserAPI(t *testing.T) {
 			},
 			buildStub: func(store *mock_db.MockStore) {
 				store.EXPECT().GetUserByEmail(gomock.Any(), registeredUser.Email).Times(1).Return(registeredUser, nil)
+				store.EXPECT().CreateSession(gomock.Any(), gomock.Any()).Times(1)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, recorder.Code)

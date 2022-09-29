@@ -4,7 +4,9 @@
 
 package db
 
-import ()
+import (
+	"github.com/google/uuid"
+)
 
 type Account struct {
 	ID        int64  `json:"id"`
@@ -20,6 +22,17 @@ type Entry struct {
 	AccountID int64 `json:"account_id"`
 	Amount    int64 `json:"amount"`
 	CreatedAt int64 `json:"created_at"`
+}
+
+type Session struct {
+	ID           uuid.UUID `json:"id"`
+	UserID       int64     `json:"user_id"`
+	RefreshToken string    `json:"refresh_token"`
+	UserAgent    string    `json:"user_agent"`
+	ClientIp     string    `json:"client_ip"`
+	IsBlocked    bool      `json:"is_blocked"`
+	ExpiresAt    int64     `json:"expires_at"`
+	CreatedAt    int64     `json:"created_at"`
 }
 
 type Transaction struct {

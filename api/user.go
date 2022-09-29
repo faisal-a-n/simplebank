@@ -65,8 +65,11 @@ type loginUserRequest struct {
 }
 
 type loginReponse struct {
-	AccessToken string              `json:"access_token"`
-	User        userDetailsResponse `json:"user"`
+	AccessToken        string              `json:"access_token"`
+	AccessTokenExpiry  time.Time           `json:"access_token_expires_at"`
+	RefreshToken       string              `json:"refresh_token"`
+	RefreshTokenExpiry time.Time           `json:"refresh_token_expires_at"`
+	User               userDetailsResponse `json:"user"`
 }
 
 func (server *Server) loginUser(ctx *gin.Context) {
@@ -88,14 +91,45 @@ func (server *Server) loginUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("Invalid password entered")))
 		return
 	}
-	access_token, err := server.tokenMaker.CreateToken(user.ID, server.config.ACCESS_TOKEN_DURATION)
+	access_token, payload, err := server.tokenMaker.CreateToken(user.ID, server.config.ACCESS_TOKEN_DURATION)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	err = server.store.UpdateSession(ctx, db.UpdateSessionParams{
+		IsBlocked: true,
+		UserID:    user.ID,
+	})
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	refresh_token, refreshTokenPayload, err := server.tokenMaker.CreateToken(user.ID, server.config.REFRESH_TOKEN_DURATION)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	sessionArgs := db.CreateSessionParams{
+		ID:           refreshTokenPayload.ID,
+		UserID:       payload.UserID,
+		RefreshToken: refresh_token,
+		UserAgent:    ctx.Request.UserAgent(),
+		ClientIp:     ctx.ClientIP(),
+		ExpiresAt:    payload.IssuedAt.Add(server.config.REFRESH_TOKEN_DURATION).Unix(),
+		CreatedAt:    payload.IssuedAt.Unix(),
+	}
+	_, err = server.store.CreateSession(ctx, sessionArgs)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	response := loginReponse{
-		AccessToken: access_token,
-		User:        userResponseBuilder(user),
+		AccessToken:        access_token,
+		AccessTokenExpiry:  payload.ExpiredAt,
+		RefreshToken:       refresh_token,
+		RefreshTokenExpiry: refreshTokenPayload.ExpiredAt,
+		User:               userResponseBuilder(user),
 	}
 	ctx.JSON(http.StatusOK, responseHandler(200, "You have logged in successfully", response))
 }

@@ -8,11 +8,12 @@ import (
 
 //This struct will hold the env data for the whole project
 type Config struct {
-	DB_DRIVER             string        `mapstructure:"DB_DRIVER"`
-	DB_SOURCE             string        `mapstructure:"DB_SOURCE"`
-	PORT                  string        `mapstructure:"PORT"`
-	SECRET_KEY            string        `mapstructure:"SECRET_KEY"`
-	ACCESS_TOKEN_DURATION time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
+	DB_DRIVER              string        `mapstructure:"DB_DRIVER"`
+	DB_SOURCE              string        `mapstructure:"DB_SOURCE"`
+	PORT                   string        `mapstructure:"PORT"`
+	SECRET_KEY             string        `mapstructure:"SECRET_KEY"`
+	ACCESS_TOKEN_DURATION  time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
+	REFRESH_TOKEN_DURATION time.Duration `mapstructure:"REFRESH_TOKEN_DURATION"`
 }
 
 func LoadConfig(path string) (config Config, err error) {
